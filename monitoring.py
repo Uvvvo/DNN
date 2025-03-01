@@ -6,23 +6,35 @@ class RealTimeMonitor:
         self.model = model
         self.scaler = scaler
         self.threshold = threshold
-        self.data_buffer = []
+        self.data_buffer = []  # مخزن مؤقت للبيانات الجديدة
     
     def add_data(self, new_reading):
         """
         إضافة بيانات جديدة والتنبؤ بالفشل.
         """
+        if new_reading is None or len(new_reading) != 5:
+            print("تحذير: البيانات المدخلة غير صالحة أو غير مكتملة.")
+            return None
+        
+        # إضافة القراءة الجديدة إلى المخزن المؤقت
         self.data_buffer.append(new_reading)
         print(f"طول البيانات في المخزن المؤقت: {len(self.data_buffer)}")
+        
+        # إذا كان هناك بيانات كافية (10 قراءات)
         if len(self.data_buffer) >= 10:
-            processed_data = self.scaler.transform([self.data_buffer[-10:]])
+            # معالجة البيانات
+            processed_data = self.scaler.transform(self.data_buffer[-10:])
+            
+            # التنبؤ بالفشل
             prediction = self.model.predict(processed_data)
-            log_prediction(prediction[0][0])  # تسجيل التنبؤ
-            if prediction[0][0] > self.threshold:
+            print(f"احتمالية الفشل: {prediction[-1][0]:.2f}")  # آخر تنبؤ
+            
+            # إرسال تنبيه إذا كانت احتمالية الفشل عالية
+            if prediction[-1][0] > self.threshold:
                 self.trigger_maintenance()
-            return prediction
+            return prediction[-1][0]  # إرجاع آخر تنبؤ
         else:
-            print("لا يوجد بيانات كافية للتنبؤ.")
+            print("في انتظار المزيد من البيانات...")
             return None
     
     def trigger_maintenance(self):
@@ -30,4 +42,4 @@ class RealTimeMonitor:
         إرسال تنبيه للصيانة.
         """
         print("تنبيه: مطلوب صيانة عاجلة!")
-        send_email("Maintenance Alert", "Immediate maintenance required!")
+        # هنا يمكنك إرسال إشعار إلى نظام الصيانة
